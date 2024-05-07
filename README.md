@@ -1,0 +1,1 @@
+Command for making a requirements file: pip-chill --no-chill > requirements.txt

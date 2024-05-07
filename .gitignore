@@ -1,0 +1,7 @@
+__pycache__
+.venv
+flagged
+image_variations/*
+logs/*
+sd_testing
+test.py
