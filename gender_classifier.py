@@ -65,6 +65,7 @@ def classify_gender(input):
 
     return predictions
 
+
 # classify_gender(['images/demo-1.jpg', 'images/demo-2.jpg'])
 # classify_gender('images')
 # classify_gender('images/demo-3.jpg')

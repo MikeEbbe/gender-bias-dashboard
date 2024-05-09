@@ -4,5 +4,6 @@ flagged
 images/*
 image_variations/*
 logs/*
+model/*
 sd_testing
 test.py
