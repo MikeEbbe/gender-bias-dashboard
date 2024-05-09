@@ -10,6 +10,8 @@ import math
 import os
 import shutil
 import torch
+from gender_classifier import classify_gender
+# from composite_image import generate_composite
 
 
 """
@@ -21,7 +23,6 @@ dummy = True # used for testing purposes. When enabled, instead of generating im
 grid_size = 10 # amount of images to generate, and show in the grid
 image_folder = 'images' # i/o folder for generated images
 image_variation_folder = 'image_variations' # i/o folder for generated variations
-log_file = "logs/error_log.txt" # log file for errors
 
 
 """
@@ -40,12 +41,12 @@ def click_generate_button(prompt):
     global iteration
     iteration = 0 # reset variation iteration
     if dummy:
-        images = get_synthetic_images()
-        return images
+        images = get_synthetic_images() # Images and labels
     else:
         # sd
         images = generate_images(prompt)
-        return images
+    images_with_gender_labels = add_labels(images)
+    return images_with_gender_labels
 
 
 """ This function generates an n amount of images using Stable Diffusion.
@@ -67,8 +68,20 @@ def generate_images(prompt):
     for i, image in enumerate(sd_pipe(prompt, num_images_per_prompt=grid_size).images):
         file_path = os.path.join(image_folder, datetime.now().strftime("%Y%m%d%H%M%S")) + str(i) + ".jpg"
         image.save(file_path)
-        images.append(file_path)
+        images.append((file_path, 'label'))
     return images
+
+
+""" This function adds gender labels to each image.
+    It uses a CLIP model to predict the gender.
+    :param images: A list of image/label tuples
+"""
+def add_labels(images):
+    image_list = [t[0] for t in images] # Only the image paths
+    gender_metrics = classify_gender(image_list) # Predict the gender
+    # Update the gender labels
+    images_with_gender_labels = [(image[0], metric['label']) for image, metric in zip(images, gender_metrics)]
+    return images_with_gender_labels
 
 
 """ This function returns a list of 10 syntetic images
@@ -79,9 +92,10 @@ def get_synthetic_images():
     images = []
 
     # Load the synthetic images
-    for filename in os.listdir(image_folder):
-        image_path = os.path.join(image_folder, filename)
-        images.append((image_path, 'label'))
+    for file in os.listdir(image_folder):
+        if file.endswith(".jpg"):
+            image_path = os.path.join(image_folder, file)
+            images.append((image_path, 'label'))
     return images
 
 
@@ -98,10 +112,9 @@ def select_image(evt: gr.SelectData):
     elif iteration > 1:
         # Use the image variation folder
         image_path = os.path.join(image_variation_folder, evt.value['image']['orig_name'])
-
     image_variations = generate_variations(image_path)
-    # print(image_variations)
-    return image_variations
+    images_variations_with_gender_labels = add_labels(image_variations)
+    return images_variations_with_gender_labels
 
 
 """ This function generates a new variation of the input image
@@ -115,7 +128,7 @@ def generate_variations(image_path):
         for i in range(grid_size):
             file_path = os.path.join(image_variation_folder, datetime.now().strftime("%Y%m%d%H%M%S")) + str(i) + ".jpg"
             shutil.copyfile(image_path, file_path)
-            image_variations.append(file_path)
+            image_variations.append((file_path, 'label'))
         return image_variations
     else:
         # Load the Stable Diffusion Variation model
@@ -136,7 +149,7 @@ def generate_variations(image_path):
         for i, output_image in enumerate(output["images"]):
             file_path = os.path.join(image_variation_folder, datetime.now().strftime("%Y%m%d%H%M%S")) + str(i) + ".jpg"
             output_image.save(file_path)
-            image_variations.append(file_path)
+            image_variations.append((file_path, 'label'))
         return image_variations
     
 
@@ -163,7 +176,7 @@ def pre_process_image(image_path):
     return input
 
 
-""" This function removes all files form the image variation folder
+""" This function removes all files form the image variation folder.
     TODO: integrate this into the code, and write a similar function 
     for the images folder.
 """
@@ -174,11 +187,11 @@ def clear_image_variation_folder():
         try:
             os.unlink(file_path)
         except Exception as e:
-            with open('logs/gradio_log.txt', 'a') as file:
+            with open('logs/error_log.txt', 'a') as file:
                 file.write('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
-""" This block of code makes up the interface
+""" This block of code makes up the interface.
 """
 with gr.Blocks() as demo:
     with gr.Row():
