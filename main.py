@@ -8,30 +8,36 @@ from torchvision import transforms
 import gradio as gr
 import math
 import os
+import plotly.graph_objects as go
 import shutil
 import torch
+
+"""
+File imports
+"""
 from gender_classifier import classify_gender
 # from composite_image import generate_composite
 
 
 """
 Global variables:
-These values can be adjusted to preference.
+These values may be adjusted to preference.
 """
-device = 'cpu' # TODO: change to GPU when running on SURF
+device = "cpu" # TODO: change to GPU when running on SURF
 dummy = True # used for testing purposes. When enabled, instead of generating images, dummy images are used.
 grid_size = 10 # amount of images to generate, and show in the grid
-image_folder = 'images' # i/o folder for generated images
-image_variation_folder = 'image_variations' # i/o folder for generated variations
+image_folder = "images" # i/o folder for generated images
+image_variation_folder = "image_variations" # i/o folder for generated variations
 
 
 """
 Intialization variables:
-These values, while global, should not be changed. 
+These values should not be changed. 
 """
-columns = math.floor(grid_size / 2)
-rows = math.floor(grid_size / columns)
-iteration = 0
+columns = math.floor(grid_size / 2) # Amount of columns of the image gallery
+rows = math.floor(grid_size / columns) # Amount of rows of the image gallery
+iteration = 0 # Variable to keep track of the current generation cycle
+barchart = gr.Plot(label="Plot", elem_id="barchart", show_label=False)
 
 
 """ This function handles the click action on the generate button.
@@ -46,7 +52,8 @@ def click_generate_button(prompt):
         # sd
         images = generate_images(prompt)
     images_with_gender_labels = add_labels(images)
-    return images_with_gender_labels
+    gender_chart = generate_barchart(images_with_gender_labels)
+    return images_with_gender_labels, gender_chart
 
 
 """ This function generates an n amount of images using Stable Diffusion.
@@ -68,7 +75,7 @@ def generate_images(prompt):
     for i, image in enumerate(sd_pipe(prompt, num_images_per_prompt=grid_size).images):
         file_path = os.path.join(image_folder, datetime.now().strftime("%Y%m%d%H%M%S")) + str(i) + ".jpg"
         image.save(file_path)
-        images.append((file_path, 'label'))
+        images.append((file_path, "label"))
     return images
 
 
@@ -80,12 +87,56 @@ def add_labels(images):
     image_list = [t[0] for t in images] # Only the image paths
     gender_metrics = classify_gender(image_list) # Predict the gender
     # Update the gender labels
-    images_with_gender_labels = [(image[0], metric['label']) for image, metric in zip(images, gender_metrics)]
+    images_with_gender_labels = [(image[0], metric["label"]) for image, metric in zip(images, gender_metrics)]
     return images_with_gender_labels
 
 
+""" This function creates a barchart using the Plotly package.
+    It creates a stacked barchart to visualize the distribution
+    between the "man" and "woman" variables.
+    :param: images_with_gender_labels: A list of image/gender tuples
+"""
+def generate_barchart(images_with_gender_labels):
+    # Get percentage of gender
+    men_count = sum(label == "man"for _, label in images_with_gender_labels)
+    women_count = sum(label == "woman" for _, label in images_with_gender_labels)
+    total_people = len(images_with_gender_labels)
+    men_percentage = round((men_count / total_people) * 100, 0)
+    women_percentage = round((women_count / total_people) * 100, 0)
+
+    x = ["Gender diversity"]
+ 
+    # Create barchart plot
+    plot = go.Figure(data=[
+        go.Bar(
+            name = "Man",
+            x = x,
+            y = [men_percentage],
+            width=0.8,
+        ),
+        go.Bar(
+            name = "Woman",
+            x = x,
+            y = [women_percentage],
+            width=0.8,
+        )   
+    ])
+    
+    plot.update_layout(
+        autosize=False,
+        barmode="stack",
+        plot_bgcolor="rgba(0,0,0,0)",
+        title="Gender distribution",
+        width=300,
+        xaxis={'visible': False, 'showticklabels': False}
+    )
+                    
+    # plot.show()
+    return plot
+
+
 """ This function returns a list of 10 syntetic images
-    It's possible to load more images by manually adding
+    It is possible to load more images by manually adding
     them to the images folder.
 """
 def get_synthetic_images():
@@ -95,7 +146,7 @@ def get_synthetic_images():
     for file in os.listdir(image_folder):
         if file.endswith(".jpg"):
             image_path = os.path.join(image_folder, file)
-            images.append((image_path, 'label'))
+            images.append((image_path, "label"))
     return images
 
 
@@ -108,13 +159,14 @@ def select_image(evt: gr.SelectData):
 
     if iteration == 1:
         # Use the images folder
-        image_path = os.path.join(image_folder, evt.value['image']['orig_name'])
+        image_path = os.path.join(image_folder, evt.value["image"]["orig_name"])
     elif iteration > 1:
         # Use the image variation folder
-        image_path = os.path.join(image_variation_folder, evt.value['image']['orig_name'])
+        image_path = os.path.join(image_variation_folder, evt.value["image"]["orig_name"])
     image_variations = generate_variations(image_path)
     images_variations_with_gender_labels = add_labels(image_variations)
-    return images_variations_with_gender_labels
+    gender_chart = generate_barchart(images_variations_with_gender_labels)
+    return images_variations_with_gender_labels, gender_chart
 
 
 """ This function generates a new variation of the input image
@@ -128,7 +180,7 @@ def generate_variations(image_path):
         for i in range(grid_size):
             file_path = os.path.join(image_variation_folder, datetime.now().strftime("%Y%m%d%H%M%S")) + str(i) + ".jpg"
             shutil.copyfile(image_path, file_path)
-            image_variations.append((file_path, 'label'))
+            image_variations.append((file_path, "label"))
         return image_variations
     else:
         # Load the Stable Diffusion Variation model
@@ -149,7 +201,7 @@ def generate_variations(image_path):
         for i, output_image in enumerate(output["images"]):
             file_path = os.path.join(image_variation_folder, datetime.now().strftime("%Y%m%d%H%M%S")) + str(i) + ".jpg"
             output_image.save(file_path)
-            image_variations.append((file_path, 'label'))
+            image_variations.append((file_path, "label"))
         return image_variations
     
 
@@ -187,13 +239,13 @@ def clear_image_variation_folder():
         try:
             os.unlink(file_path)
         except Exception as e:
-            with open('logs/error_log.txt', 'a') as file:
-                file.write('Failed to delete %s. Reason: %s' % (file_path, e))
+            with open("logs/error_log.txt", "a") as file:
+                file.write("Failed to delete %s. Reason: %s" % (file_path, e))
 
 
 """ This block of code makes up the interface.
 """
-with gr.Blocks() as demo:
+with gr.Blocks(css=".js-plotly-plot {display: flex; justify-content: center}") as demo:
     with gr.Row():
         with gr.Column(scale=1, min_width=1000):
             prompt_input = gr.Textbox(label="Prompt")
@@ -201,13 +253,14 @@ with gr.Blocks() as demo:
                 label="Generated images", show_label=False, elem_id="gallery",
                 columns=columns, rows=rows, object_fit="contain", height="auto", min_width=200, allow_preview=False
             )
-            gallery.select(select_image, None, outputs=gallery)
+            gallery.select(select_image, None, outputs=[gallery,barchart])
             generate_btn = gr.Button("Generate new set of images")
-            generate_btn.click(click_generate_button, inputs=prompt_input, outputs=gallery)
-        text1 = gr.Textbox(label="Metrics")
+            generate_btn.click(click_generate_button, inputs=prompt_input, outputs=[gallery,barchart])
+        with gr.Column(scale=1):
+            barchart.render()
 
 
 """ Initialize
 """
 if __name__ == "__main__":
-    demo.launch(favicon_path='favicon.ico')
+    demo.launch(favicon_path="favicon.ico")
