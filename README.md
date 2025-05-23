@@ -1,13 +1,13 @@
 # Interactive Image Generation Dashboard
 ## Expanding the search space in Stable Diffusion
 
-Web application that enables users to generate and refine AI images while providing real-time feedback on gender representation and bias. Built to research whether visual feedback increases user awareness of gender stereotypes in AI-generated content.
+Dashboard that enables users to generate and refine AI images while providing real-time feedback on gender representation and bias. Built to research whether visual feedback increases user awareness of gender stereotypes in AI-generated content.
 
 ![Dashboard](docs/demo/dashboard.png "Dashboard")
 
 ## Overview
 
-This dashboard aims to bridge the gap between inherent biases in image generation models and the pursuit of more representative, balanced portrayals of diverse demographics. Users begin with a text prompt, select from eight generated images, and iteratively create variations while observing how their choices impact gender diversity through visual analytics.
+This application aims to bridge the gap between inherent biases in image generation models and the pursuit of more representative, balanced portrayals of diverse demographics. Users begin with a text prompt, select from eight generated images, and iteratively create variations while observing how their choices impact gender diversity through visual analytics.
 
 ### Core Features
 
@@ -134,7 +134,7 @@ This is a research project focused on understanding gender bias in AI image gene
 
 If you use this dashboard in your research, please cite the associated unpublished thesis:
 
->[Ebbe, M.](https://www.linkedin.com/in/mike-ebbe/) (2024). *Examining the Impact of an ?Interactive Dashboard on the Awareness of Gender Bias.* Unpublished master's thesis, HU University of Applied Sciences
+>[Ebbe, M.](https://www.linkedin.com/in/mike-ebbe/) (2024). *Examining the Impact of an Interactive Dashboard on the Awareness of Gender Bias.* Unpublished master's thesis, HU University of Applied Sciences
 
 ## About Me
 
