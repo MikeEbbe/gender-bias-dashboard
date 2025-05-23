@@ -6,6 +6,7 @@ from diffusers import StableDiffusionPipeline, StableDiffusionImageVariationPipe
 from PIL import Image
 from torchvision import transforms
 import gradio as gr
+from gradio_modal import Modal
 import math
 import os
 import plotly.graph_objects as go
@@ -38,6 +39,7 @@ columns = math.floor(grid_size / 2) # Amount of columns of the image gallery
 rows = math.floor(grid_size / columns) # Amount of rows of the image gallery
 iteration = 0 # Variable to keep track of the current generation cycle
 barchart = gr.Plot(label="Plot", elem_id="barchart", show_label=False)
+# composite = gr.Image(label="Composite image", elem_id="composite", show_label=True)
 
 
 """ This function handles the click action on the generate button.
@@ -51,8 +53,11 @@ def click_generate_button(prompt):
     else:
         # sd
         images = generate_images(prompt)
+    # for image in images_with_gender_labels:
+        # image.save('images/random/iteration') # Save images to its own folder
     images_with_gender_labels = add_labels(images)
     gender_chart = generate_barchart(images_with_gender_labels)
+    # composite_image = generate_composite(images_with_gender_labels)
     return images_with_gender_labels, gender_chart
 
 
@@ -246,6 +251,11 @@ def clear_image_variation_folder():
 """ This block of code makes up the interface.
 """
 with gr.Blocks(css=".js-plotly-plot {display: flex; justify-content: center}") as demo:
+    with Modal(visible=True) as modal:
+        # with gr.Row():
+        gr.Markdown("Note: The Stable Diffusion model has been shown to generate images adhering to stereotypes. The model may produce images that do not mirror the modern social roles.")
+        close_modal_button = gr.Button("I understand", scale=1)
+        close_modal_button.click(lambda: Modal(visible=False), None, modal)
     with gr.Row():
         with gr.Column(scale=1, min_width=1000):
             prompt_input = gr.Textbox(label="Prompt")
@@ -258,6 +268,7 @@ with gr.Blocks(css=".js-plotly-plot {display: flex; justify-content: center}") a
             generate_btn.click(click_generate_button, inputs=prompt_input, outputs=[gallery,barchart])
         with gr.Column(scale=1):
             barchart.render()
+            # composite.render()
 
 
 """ Initialize
