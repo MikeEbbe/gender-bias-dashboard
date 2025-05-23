@@ -1,9 +1,14 @@
 __pycache__
 .venv
+.vscode
 flagged
 images/*
 image_variations/*
 logs/*
+results/*
+!results/dummy_user/
+!results/dummy_user/**
 model/*
+sandbox
 sd_testing
 test.py
